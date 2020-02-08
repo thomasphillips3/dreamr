@@ -75,13 +75,17 @@ class MainActivity : AppCompatActivity() {
     fun saveImage(bitmap: Bitmap): String {
         val bytes = ByteArrayOutputStream()
         bitmap.compress(Bitmap.CompressFormat.JPEG, 90, bytes)
-        val wallpaperDirectory = File((Environment.getExternalStorageDirectory()).toString() + IMAGE_DIRECTORY)
+        val wallpaperDirectory =
+            File((Environment.getExternalStorageDirectory()).toString() + IMAGE_DIRECTORY)
         if (!wallpaperDirectory.exists()) {
             wallpaperDirectory.mkdirs()
         }
 
         try {
-            val f = File(wallpaperDirectory, ((Calendar.getInstance()).timeInMillis.toString() + ".jpg"))
+            val f = File(
+                wallpaperDirectory,
+                ((Calendar.getInstance()).timeInMillis.toString() + ".jpg")
+            )
             f.createNewFile()
             val fo = FileOutputStream(f)
             fo.write(bytes.toByteArray())
