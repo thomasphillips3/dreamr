@@ -1,5 +1,7 @@
 package com.thomasphillips3.dreamr
 
+import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.media.MediaScannerConnection
@@ -9,6 +11,7 @@ import android.provider.MediaStore
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import com.livinglifetechway.quickpermissions_kotlin.runWithPermissions
 import kotlinx.android.synthetic.main.activity_main.*
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -24,7 +27,11 @@ class MainActivity : AppCompatActivity() {
         buttonLoadImage.setOnClickListener { showPictureDialog() }
     }
 
-    private fun showPictureDialog() {
+    private fun showPictureDialog() = runWithPermissions(
+        Manifest.permission.CAMERA,
+        Manifest.permission.WRITE_EXTERNAL_STORAGE,
+        Manifest.permission.READ_EXTERNAL_STORAGE
+    ) {
         val pictureDialog = AlertDialog.Builder(this)
         pictureDialog.setTitle("Select Action")
 
@@ -39,8 +46,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun choosePhotoFromGallery() {
-        val galleryIntent = Intent(Intent.ACTION_PICK,
-            MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+        val galleryIntent = Intent(
+            Intent.ACTION_PICK,
+            MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+        )
         startActivityForResult(galleryIntent, GALLERY)
     }
 
@@ -72,7 +81,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    fun saveImage(bitmap: Bitmap): String {
+    private fun saveImage(bitmap: Bitmap): String {
         val bytes = ByteArrayOutputStream()
         bitmap.compress(Bitmap.CompressFormat.JPEG, 90, bytes)
         val wallpaperDirectory =
@@ -99,6 +108,9 @@ class MainActivity : AppCompatActivity() {
         return ""
     }
 
+    fun Context.toast(message: String) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+    }
     companion object {
         private const val IMAGE_DIRECTORY: String = "/dreamr"
         private const val GALLERY = 1
