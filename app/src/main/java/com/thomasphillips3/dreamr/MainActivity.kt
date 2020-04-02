@@ -1,120 +1,143 @@
 package com.thomasphillips3.dreamr
 
-import android.Manifest
-import android.content.Context
+import android.app.Activity
+import android.app.AlertDialog
 import android.content.Intent
-import android.graphics.Bitmap
-import android.media.MediaScannerConnection
 import android.os.Bundle
-import android.os.Environment
-import android.provider.MediaStore
+import android.util.Log
+import android.view.Menu
+import android.view.MenuItem
+import android.view.View
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import com.livinglifetechway.quickpermissions_kotlin.runWithPermissions
+import com.thomasphillips3.dreamr.util.getFileInfo
+import com.thomasphillips3.dreamr.util.imagepicker.ImagePicker
+import com.thomasphillips3.dreamr.util.imagepicker.constant.ImageProvider
+import com.thomasphillips3.dreamr.util.openUrl
+import com.thomasphillips3.dreamr.util.showImage
 import kotlinx.android.synthetic.main.activity_main.*
-import java.io.ByteArrayOutputStream
+import kotlinx.android.synthetic.main.content_camera_only.*
+import kotlinx.android.synthetic.main.content_gallery_only.*
+import kotlinx.android.synthetic.main.content_profile.*
 import java.io.File
-import java.io.FileOutputStream
-import java.io.IOException
-import java.util.*
 
 class MainActivity : AppCompatActivity() {
+
+    private var cameraFile: File? = null
+    private var galleryFile: File? = null
+    private var profileFile: File? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
-        buttonLoadImage.setOnClickListener { showPictureDialog() }
+        setSupportActionBar(toolbar)
+        imageProfile.setDrawableImage(R.drawable.ic_person, true)
     }
 
-    private fun showPictureDialog() = runWithPermissions(
-        Manifest.permission.CAMERA,
-        Manifest.permission.WRITE_EXTERNAL_STORAGE,
-        Manifest.permission.READ_EXTERNAL_STORAGE
-    ) {
-        val pictureDialog = AlertDialog.Builder(this)
-        pictureDialog.setTitle("Select Action")
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menuInflater.inflate(R.menu.menu_main, menu)
+        return super.onCreateOptionsMenu(menu)
+    }
 
-        val pictureDialogItems = arrayOf("Select photo from gallery", "Take a photo")
-        pictureDialog.setItems(pictureDialogItems) { dialog, which ->
-            when (which) {
-                0 -> choosePhotoFromGallery()
-                1 -> takePhotoFromCamera()
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        when (item.itemId) {
+            R.id.action_github -> {
+                openUrl(this, GITHUB_REPOSITORY)
+                return true
             }
         }
-        pictureDialog.show()
+        return super.onOptionsItemSelected(item)
     }
 
-    private fun choosePhotoFromGallery() {
-        val galleryIntent = Intent(
-            Intent.ACTION_PICK,
-            MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-        )
-        startActivityForResult(galleryIntent, GALLERY)
+    fun pickProfileImage(view: View) {
+        ImagePicker.with(this)
+            .cropSquare()
+            .maxResultSize(512, 512)
+            .start(PROFILE_IMAGE_REQ_CODE)
     }
 
-    private fun takePhotoFromCamera() {
-        val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-        startActivityForResult(intent, CAMERA)
+    fun pickGalleryImage(view: View) {
+        ImagePicker.with(this)
+            .crop()
+            .provider(ImageProvider.GALLERY)
+            .maxResultSize(1080, 1920)
+            .start(GALLERY_IMAGE_REQ_CODE)
     }
 
-    public override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == GALLERY) {
-            if (data != null) {
-                val contentUri = data!!.data
-                try {
-                    val bitmap = MediaStore.Images.Media.getBitmap(this.contentResolver, contentUri)
-                    val path = saveImage(bitmap)
-                    Toast.makeText(this@MainActivity, "Image saved", Toast.LENGTH_SHORT).show()
-                    imageView!!.setImageBitmap(bitmap)
-                } catch (e: IOException) {
-                    e.printStackTrace()
-                    Toast.makeText(this@MainActivity, "Save failed", Toast.LENGTH_SHORT).show()
+    fun pickCameraImage(view: View) {
+        ImagePicker.with(this)
+            .provider(ImageProvider.CAMERA)
+            .compress(1024)
+            .start(CAMERA_IMAGE_REQ_CODE)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        Log.d(TAG, "data intent: {$data}\nresultCode: {$resultCode}\nrequestCode: {$requestCode}\nextras: {${data?.extras}}")
+
+        when (resultCode) {
+            Activity.RESULT_OK -> {
+                Log.e(TAG, "Path:${ImagePicker.getFilePath(data)}")
+                val file = ImagePicker.getFile(data)!!
+                when(requestCode) {
+                    PROFILE_IMAGE_REQ_CODE -> {
+                        profileFile = file
+                        imageProfile.setLocalImage(file, true)
+                    }
+
+                    GALLERY_IMAGE_REQ_CODE -> {
+                        galleryFile = file
+                        imageGallery.setLocalImage(file)
+                    }
+
+                    CAMERA_IMAGE_REQ_CODE -> {
+                        cameraFile = file
+                        imageCamera.setLocalImage(file, false)
+                    }
                 }
-            } else if (requestCode == CAMERA) {
-                val thumbnail = data!!.extras!!.get("data") as Bitmap
-                imageView!!.setImageBitmap(thumbnail)
-                saveImage(thumbnail)
-                Toast.makeText(this@MainActivity, "Image saved", Toast.LENGTH_SHORT).show()
+            }
+            ImagePicker.RESULT_ERROR -> {
+                Toast.makeText(this, ImagePicker.getError(data), Toast.LENGTH_SHORT).show()
+            }
+            else -> {
+                Toast.makeText(this, "Task canceled", Toast.LENGTH_SHORT).show()
             }
         }
+        super.onActivityResult(requestCode, resultCode, data)
     }
 
-    private fun saveImage(bitmap: Bitmap): String {
-        val bytes = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 90, bytes)
-        val wallpaperDirectory =
-            File((Environment.getExternalStorageDirectory()).toString() + IMAGE_DIRECTORY)
-        if (!wallpaperDirectory.exists()) {
-            wallpaperDirectory.mkdirs()
+    fun showImage(view: View) {
+        val file = when(view) {
+            imageProfile -> profileFile
+            imageCamera -> cameraFile
+            imageGallery -> galleryFile
+            else -> null
         }
 
-        try {
-            val f = File(
-                wallpaperDirectory,
-                ((Calendar.getInstance()).timeInMillis.toString() + ".jpg")
-            )
-            f.createNewFile()
-            val fo = FileOutputStream(f)
-            fo.write(bytes.toByteArray())
-            MediaScannerConnection.scanFile(this, arrayOf(f.getPath()), arrayOf("image/jpeg"), null)
-            fo.close()
-            return f.getAbsolutePath()
-        } catch (e: IOException) {
-            e.printStackTrace()
-            Toast.makeText(this@MainActivity, "Save failed", Toast.LENGTH_SHORT).show()
+        file?.let {
+            showImage(this, file)
         }
-        return ""
     }
 
-    fun Context.toast(message: String) {
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+    fun showImageInfo(view: View) {
+        val file = when(view) {
+            imageProfileInfo -> profileFile
+            imageCameraInfo -> cameraFile
+            imageGalleryInfo -> galleryFile
+            else -> null
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Image Info")
+            .setMessage(getFileInfo(file))
+            .setPositiveButton("Ok", null)
+            .show()
     }
+
     companion object {
-        private const val IMAGE_DIRECTORY: String = "/dreamr"
-        private const val GALLERY = 1
-        private const val CAMERA = 2
-
+        private const val GITHUB_REPOSITORY = "https://github.com/thomasphillips3/dreamr"
+        private const val TAG = "MainActivity"
+        private const val PROFILE_IMAGE_REQ_CODE = 101
+        private const val GALLERY_IMAGE_REQ_CODE = 102
+        private const val CAMERA_IMAGE_REQ_CODE = 103
     }
 }
