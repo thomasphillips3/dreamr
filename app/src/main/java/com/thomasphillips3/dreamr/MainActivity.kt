@@ -10,6 +10,7 @@ import android.view.MenuItem
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.amazonaws.mobile.client.AWSMobileClient
 import com.thomasphillips3.dreamr.util.getFileInfo
 import com.thomasphillips3.dreamr.util.imagepicker.ImagePicker
 import com.thomasphillips3.dreamr.util.imagepicker.constant.ImageProvider
@@ -29,6 +30,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        AWSMobileClient.getInstance().initialize(this).execute()
         setContentView(R.layout.activity_main)
         setSupportActionBar(toolbar)
         imageProfile.setDrawableImage(R.drawable.ic_person, true)
