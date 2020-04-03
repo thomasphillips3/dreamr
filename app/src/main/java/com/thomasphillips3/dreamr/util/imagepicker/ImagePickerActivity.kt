@@ -140,7 +140,7 @@ class ImagePickerActivity : AppCompatActivity() {
     private fun setResult(file: File) {
         val intent = Intent()
         intent.data = Uri.fromFile(file)
-        intent.putExtra(ImagePicker.EXTRA_FILE_PATH, file.absoluteFile)
+        intent.putExtra(ImagePicker.EXTRA_FILE_PATH, file.absoluteFile.toString())
         setResult(Activity.RESULT_OK, intent)
         finish()
     }
