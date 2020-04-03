@@ -39,6 +39,9 @@ dependencies {
     implementation 'com.github.bumptech.glide:glide:4.10.0'
     implementation 'com.github.florent37:inline-activity-result-kotlin:1.0.1'
     implementation 'com.github.yalantis:ucrop:2.2.4'
+    implementation ('com.amazonaws:aws-android-sdk-mobile-client:2.6.7@aar') { transitive = true }
+    implementation 'com.amazonaws:aws-android-sdk-s3:2.6.0'
+    implementation 'com.amazonaws:aws-android-sdk-cognito:2.6.0'
     testImplementation 'junit:junit:4.13'
     androidTestImplementation 'androidx.test.ext:junit:1.1.1'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
